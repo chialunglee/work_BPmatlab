@@ -47,43 +47,53 @@ RMSE2=zeros(100,1);
 for epoch=1:1:100
 t1=[];
 t2=[];
+% 前面 400 筆資料當訓練
 for iter=1:1:400
 
-% forward �e�ǳ���
+% forward �e�ǳ���
+% 前傳，還沒倒傳遞
 
 % training
+% (1, 4) * (4, 35) => (1, 35)
 hiddensigma=input(iter,:)*hiddenmatrix;
+% 隱藏層不取 hardlim()
+% 為了非線性的能力
+% sigmoid 扭曲空間
 hiddennet=logsig(hiddensigma);       
 
+% (1, 35) * (35, 1) => (1, 1)
 outputsigma=hiddennet*outputmatrix;
 outputnet=purelin(outputsigma);    
 
 
-% simalation 
-if iter+400<=600 % take the first 400 as training samples, the remaining 200 as simulations
-hsigma=input(iter+400,:)*hiddenmatrix;
-hnet=logsig(hsigma);       
-
-osigma=hnet*outputmatrix;
-onet=purelin(osigma);
-
-mis=target(iter+400)-onet;
-t2=[t2;mis.^2];
-end
-
-
-
+% simalation 跑 200 筆
+% 資料不夠，可以不做
+% if iter+400<=600 % take the first 400 as training samples, the remaining 200 as simulations
+% hsigma=input(iter+400,:)*hiddenmatrix;
+% hnet=logsig(hsigma);       
+% 
+% osigma=hnet*outputmatrix;
+% onet=purelin(osigma);
+% 
+% mis=target(iter+400)-onet;
+% t2=[t2;mis.^2];
+% end
 
 
-% backward part �˶ǳ���
-% delta of outputmatrix ��X�h�� delta
+
+
+
+% backward part �˶ǳ���
+% delta of outputmatrix ��X�h�� delta
 doutputnet=dpurelin(outputsigma);
+% (目標 - 實際) * transfer 的微分
 deltaoutput=(target(iter)-outputnet)*doutputnet;
 error=target(iter)-outputnet;
 t1=[t1;error.^2];
 
 
-% delta of hidden layer ���üh�� delta
+% delta of hidden layer ���üh�� delta
+% 前一層的 delta 傳過來
 tempdelta=deltaoutput*outputmatrix;
 transfer=dlogsig(hiddensigma,logsig(hiddensigma));
 deltahidden=[];
@@ -91,11 +101,12 @@ for i=1:1:35
 deltahidden=[deltahidden;tempdelta(i)*transfer(i)];
 end
 
-% output layer weight update ��X�h�v����s
+% output layer weight update ��X�h�v����s
+% 0.025 學習率 aplha 泰勒展開式
 newoutputmatrix=outputmatrix+0.025*(deltaoutput*hiddennet)';
 outputmatrix=newoutputmatrix;
 
-% hidden layer ���üh�v����s
+% hidden layer ���üh�v����s
 newhiddenmatrix=hiddenmatrix;
 for i=1:1:35
 for j=1:1:4
