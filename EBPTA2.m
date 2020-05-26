@@ -1,39 +1,25 @@
 function EBPTA2
-input=[];
-target=[];
 out=[];
-s=[];
-y=[];
-x1=[];
-x2=[];
-x3=[];
-x4=[];
 
-
-for i=1:1:600
-x1=rand;
-x2=rand;
-x3=rand;
-x4=rand;
-s=[x1,x2,x3,x4];
-input=[input;s];
-y=0.8*x1*x2*x3*x4+x1.^2+x2.^2+x3.^3+x4.^2+x1+x2*0.7-x2.^2*x3.^2+0.5*x1*x4.^2+x4*x2.^3+(-x1)*x2+(x1*x2*x3*x4).^3+(x1-x2+x3-x4)+(x1*x4)-(x2*x3)-2;
-target=[target;y];
-end
+input = readmatrix("iris_in.csv");
+[rowOfInput, colOfInput] = size(input);
+target = readmatrix("iris_out.csv");
+[rowOfTarget, colOfTarget] = size(target);
 
 outnet=[];
-
+numberOfHiddenUnit = 46;
+% numberOfOutputUnit = 1;
 % initialize the weight matrix
-outputmatrix=zeros(35,1);
-for i=1:1:35
+outputmatrix=zeros(numberOfHiddenUnit,1);
+for i=1:1:numberOfHiddenUnit
  for j=1:1:1
    outputmatrix(i,j)=rand;
  end
 end
 
-hiddenmatrix=zeros(4,35);
+hiddenmatrix=zeros(4,numberOfHiddenUnit);
 for i=1:1:4
- for j=1:1:35
+ for j=1:1:numberOfHiddenUnit
    hiddenmatrix(i,j)=rand;
  end
 end
@@ -48,7 +34,7 @@ for epoch=1:1:100
 t1=[];
 t2=[];
 % 前面 400 筆資料當訓練
-for iter=1:1:400
+for iter=1:1:75
 
 % forward �e�ǳ���
 % 前傳，還沒倒傳遞
@@ -97,7 +83,7 @@ t1=[t1;error.^2];
 tempdelta=deltaoutput*outputmatrix;
 transfer=dlogsig(hiddensigma,logsig(hiddensigma));
 deltahidden=[];
-for i=1:1:35
+for i=1:1:numberOfHiddenUnit
 deltahidden=[deltahidden;tempdelta(i)*transfer(i)];
 end
 
@@ -108,8 +94,9 @@ outputmatrix=newoutputmatrix;
 
 % hidden layer ���üh�v����s
 newhiddenmatrix=hiddenmatrix;
-for i=1:1:35
+for i=1:1:numberOfHiddenUnit
 for j=1:1:4
+% 有容錯能力
 newhiddenmatrix(j,i)=hiddenmatrix(j,i)+0.025*deltahidden(i)*input(iter,j);
 end
 end
@@ -117,10 +104,10 @@ hiddenmatrix=newhiddenmatrix;
 end
 
 
-RMSE1(epoch) = sqrt(sum(t1)/400);
-RMSE2(epoch) = sqrt(sum(t2)/200);
+RMSE1(epoch) = sqrt(sum(t1)/75);
+RMSE2(epoch) = sqrt(sum(t2)/75);
 
-fprintf('epoch %.0f:  RMSE = %.3f\n',epoch, sqrt(sum(t1)/400));
+fprintf('epoch %.0f:  RMSE = %.3f\n',epoch, sqrt(sum(t1)/75));
 end
 
 
@@ -135,7 +122,7 @@ ylabel('RMSE');xlabel('Epoch');
 
 Train_Correct=0;
 
-for i=1:400
+for i=1:75
     
     hiddensigma=input(i,:)*hiddenmatrix;
     hiddennet=logsig(hiddensigma);       
@@ -150,7 +137,7 @@ end
 
 Simu_Correct=0;
 
-for i=401:length(input)
+for i=76:length(input)
     
     hiddensigma=input(i,:)*hiddenmatrix;
     hiddennet=logsig(hiddensigma);       
@@ -162,14 +149,14 @@ for i=401:length(input)
         end
 end
 figure(2);
-plot(401:length(input),target(401:length(input)),401:length(input),outnet(1:200))
+plot(76:length(input),target(76:length(input)),76:length(input),outnet(1:75))
 legend('Function','Simulation');
-Train_Percent= (Train_Correct) / 400;
-Simu_Percent= (Simu_Correct) / (length(input)-400);
+Train_Percent= (Train_Correct) / 75;
+Simu_Percent= (Simu_Correct) / (length(input)-75);
 Train_correct_percent=Train_Percent
 Simu_correct_percent=Simu_Percent
 
 
 
 figure(3)
-[m,b,r]=postreg(out',target(1:400)');
+[m,b,r]=postreg(out',target(1:75)');
