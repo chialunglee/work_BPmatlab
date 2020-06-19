@@ -1,9 +1,26 @@
 function EBPTA2
+    imageHeight = 32;
+    imageWidth = 32;
+    % 有 20 個人
+    people = 20;
+    % 每個樣本取 5
+    withinsample = 5;
+    % 1 訓練 2 測試
+    FFACE = [readImage(imageHeight, imageWidth, people, withinsample, 1);
+             readImage(imageHeight, imageWidth, people, withinsample, 2)];
     out = [];
     % 讀檔讀進來的資料
-    input = readmatrix("iris_in.csv");
+    input = PCALDA_Train(FFACE);
     [rowOfInput, colOfInput] = size(input);
-    target = readmatrix("iris_out.csv");
+    target = zeros(2 * people * withinsample, 1);
+    for i = 1:1:2
+        for j = 1:1:people
+            for k = 1:1:withinsample
+                target(((i - 1) * (people * withinsample) + (j - 1) * withinsample + k), 1) = j;
+            end
+        end
+    end
+%     target = csvread("iris_out.csv");
     % [rowOfTarget, colOfTarget] = size(target);
 
     outnet = [];
@@ -13,18 +30,18 @@ function EBPTA2
     % initialize the weight matrix
     % 輸出層神經元的 weight
     % (46,1)
-    outputmatrix = zeros(numberOfHiddenUnit, 1);
+    outputWeight = zeros(numberOfHiddenUnit, 1);
     for i = 1:1:numberOfHiddenUnit
         for j = 1:1:1
-            outputmatrix(i, j)=rand;
+            outputWeight(i, j)=rand;
         end
     end
     % `colOfInput` 是輸入資料的維度 (4)
-    % `hiddenmatrix` 是所有隱藏層神經元的 weight
-    hiddenmatrix = zeros(colOfInput, numberOfHiddenUnit);
+    % `hiddenWeight` 是所有隱藏層神經元的 weight (4, 46)
+    hiddenWeight = zeros(colOfInput, numberOfHiddenUnit);
     for i = 1:1:colOfInput
         for j = 1:1:numberOfHiddenUnit
-            hiddenmatrix(i, j)=rand;
+            hiddenWeight(i, j)=rand;
         end
     end
 
@@ -39,36 +56,22 @@ function EBPTA2
         t1 = [];
         t2 = [];
         % 前面一半的資料當訓練
-        for iter = 1:1:rowOfInput
+        for iter = 1:1:rowOfInput/2
             % 前傳，還沒倒傳遞
 
             % training
             % (1, 4) * (4, 隱藏層神經元個數) => (1, 隱藏層神經元個數)
             % `hiddensigma` 是 weight 與 data 相乘的總和
-            hiddensigma = input(iter,:)*hiddenmatrix;
+            hiddensigma = input(iter,:)*hiddenWeight;
             % 隱藏層不取 hardlim()
             % 為了非線性的能力
             % sigmoid 扭曲空間
             hiddennet = logsig(hiddensigma);
 
             % (1, 隱藏層神經元個數) * (隱藏層神經元個數, 輸出層神經元個數) => (1, 1)
-            outputsigma = hiddennet*outputmatrix;
+            outputsigma = hiddennet*outputWeight;
             outputnet = purelin(outputsigma);
-
-
-            % simalation 跑 200 筆
-            % 資料不夠，可以不做
-            % if iter+400<=600 % take the first 400 as training samples, the remaining 200 as simulations
-            % hsigma=input(iter+400,:)*hiddenmatrix;
-            % hnet=logsig(hsigma);
-            % 
-            % osigma=hnet*outputmatrix;
-            % onet=purelin(osigma);
-            % 
-            % mis=target(iter+400)-onet;
-            % t2=[t2;mis.^2];
-            % end
-            % delta of outputmatrix ��X�h�� delta
+            
             doutputnet = dpurelin(outputsigma);
             % (目標 - 實際) * transfer 的微分
             error = target(iter) - outputnet;
@@ -76,34 +79,35 @@ function EBPTA2
             t1 = [t1;error.^2];
             % 從這以下看不懂
             % 前一層的 delta 傳過來
-            tempdelta=deltaoutput*outputmatrix;
-            transfer=dlogsig(hiddensigma,logsig(hiddensigma));
+            % (1, 1) * (46, 1) 可以
+            tempdelta=deltaoutput*outputWeight;
+            transfer=dlogsig(hiddensigma, hiddennet);
             deltahidden=[];
             for i=1:1:numberOfHiddenUnit
                 deltahidden=[deltahidden;tempdelta(i)*transfer(i)];
             end
             % 0.025 學習率 aplha 泰勒展開式
             % 注意加號
-            newoutputmatrix=outputmatrix+0.025*(deltaoutput*hiddennet)';
-            outputmatrix=newoutputmatrix;
+            newoutputWeight=outputWeight+0.025*(deltaoutput*hiddennet)';
+            outputWeight=newoutputWeight;
 
             % hidden layer ���üh�v����s
-            newhiddenmatrix=hiddenmatrix;
+            newhiddenWeight=hiddenWeight;
             for i=1:1:numberOfHiddenUnit
                 for j=1:1:colOfInput
                     % 有容錯能力
                     % 注意加號
-                    newhiddenmatrix(j,i)=hiddenmatrix(j,i)+0.025*deltahidden(i)*input(iter,j);
+                    newhiddenWeight(j,i)=hiddenWeight(j,i)+0.025*deltahidden(i)*input(iter,j);
                 end
             end
-            hiddenmatrix=newhiddenmatrix;
+            hiddenWeight=newhiddenWeight;
         end
 
 
-        RMSE1(epoch) = sqrt(sum(t1)/75);
-        RMSE2(epoch) = sqrt(sum(t2)/75);
+        RMSE1(epoch) = sqrt(sum(t1)/(rowOfInput/2));
+        RMSE2(epoch) = sqrt(sum(t2)/(rowOfInput/2));
 
-        fprintf('epoch %.0f:  RMSE = %.3f\n',epoch, sqrt(sum(t1)/75));
+        fprintf('epoch %.0f:  RMSE = %.3f\n',epoch, sqrt(sum(t1)/(rowOfInput/2)));
     end
 
 
@@ -118,11 +122,11 @@ function EBPTA2
 
     Train_Correct=0;
 
-    for i=1:75
+    for i=1:(rowOfInput/2)
 
-        hiddensigma=input(i,:)*hiddenmatrix;
+        hiddensigma=input(i,:)*hiddenWeight;
         hiddennet=logsig(hiddensigma);
-        outputsigma=hiddennet*outputmatrix;
+        outputsigma=hiddennet*outputWeight;
         outputnet=purelin(outputsigma);
         out=[out;outputnet];
             if outputnet > target(i)-0.5 &  outputnet <= target(i)+0.5
@@ -133,11 +137,11 @@ function EBPTA2
 
     Simu_Correct=0;
 
-    for i=76:length(input)
+    for i=((rowOfInput/2) + 1):rowOfInput
 
-        hiddensigma=input(i,:)*hiddenmatrix;
+        hiddensigma=input(i,:)*hiddenWeight;
         hiddennet=logsig(hiddensigma);
-        outputsigma=hiddennet*outputmatrix;
+        outputsigma=hiddennet*outputWeight;
         outputnet=purelin(outputsigma);
         outnet=[outnet;outputnet];
             if outputnet > target(i)-0.5 &  outputnet <= target(i)+0.5
@@ -145,15 +149,15 @@ function EBPTA2
             end
     end
     figure(2);
-    plot(76:length(input),target(76:length(input)),76:length(input),outnet(1:75))
+    plot(((rowOfInput/2) + 1):rowOfInput,target(((rowOfInput/2) + 1):rowOfInput),((rowOfInput/2) + 1):rowOfInput,outnet(1:(rowOfInput/2)))
     legend('Function','Simulation');
-    Train_Percent= (Train_Correct) / 75;
-    Simu_Percent= (Simu_Correct) / (length(input)-75);
+    Train_Percent= (Train_Correct) / (rowOfInput/2);
+    Simu_Percent= (Simu_Correct) / (rowOfInput-(rowOfInput/2));
     Train_correct_percent=Train_Percent
     Simu_correct_percent=Simu_Percent
 
 
 
     figure(3)
-    [m,b,r]=postreg(out',target(1:75)');
+    [m,b,r]=postreg(out',target(1:(rowOfInput/2))');
 end
