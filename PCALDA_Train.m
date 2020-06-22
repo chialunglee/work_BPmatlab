@@ -14,6 +14,7 @@ function [pcaTotalFACE] = PCALDA_Train(FFACE)
 %     FFACE = readImage(imageHeight, imageWidth, people, withinsample, startFrom);
     % 計算 zeroMean
     zeromeanTotalFACE = FFACE - mean(FFACE);
+    zeromeanTotalFACE = zeromeanTotalFACE ./ (max(FFACE) - min(FFACE));
 
     % pcaSST = cov(zeromeanTotalFACE);
     % "'" Transpose

@@ -11,6 +11,7 @@ function EBPTA2
     out = [];
     % 讀檔讀進來的資料
     input = PCALDA_Train(FFACE);
+%     input = (input - mean(input)) ./ (max(input) - min(input));
     [rowOfInput, colOfInput] = size(input);
     target = zeros(2 * people * withinsample, 1);
     for i = 1:1:2
@@ -25,14 +26,14 @@ function EBPTA2
 
     outnet = [];
     % 隱藏層神經元個數
-    numberOfHiddenUnit = 46;
-    % numberOfOutputUnit = 1;
+    numberOfHiddenUnit = 25;
+    numberOfOutputUnit = 1;
     % initialize the weight matrix
     % 輸出層神經元的 weight
     % (46,1)
-    outputWeight = zeros(numberOfHiddenUnit, 1);
+    outputWeight = zeros(numberOfHiddenUnit, numberOfOutputUnit);
     for i = 1:1:numberOfHiddenUnit
-        for j = 1:1:1
+        for j = 1:1:numberOfOutputUnit
             outputWeight(i, j)=rand;
         end
     end
@@ -44,14 +45,16 @@ function EBPTA2
             hiddenWeight(i, j)=rand;
         end
     end
+    
+    trainCount = 50;
 
     % root mean square error
-    RMSE1 = zeros(100, 1);
-    RMSE2 = zeros(100, 1);
+    RMSE1 = zeros(trainCount, 1);
+    RMSE2 = zeros(trainCount, 1);
 
 
     % Training
-    for epoch = 1:1:100
+    for epoch = 1:1:trainCount
         % 存訓練的 error
         t1 = [];
         t2 = [];
